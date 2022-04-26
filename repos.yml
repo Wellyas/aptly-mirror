@@ -1,0 +1,21 @@
+repos:
+  - name: "proxmox"
+    upstream_url: "http://download.proxmox.com/debian/pve"
+    dists:
+      - bullseye
+    components:
+      - pve-no-subscription
+    archs:
+      - amd64
+  - name: "debian"
+    upstream_url: "http://deb.debian.org/debian/"
+    dists:
+      - bullseye
+      - bullseye-updates
+    components:
+      - main
+    archs:
+      - amd64
+      - arm64
+debug: false
+path: "echo"
