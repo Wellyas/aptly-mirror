@@ -16,6 +16,13 @@ type Repo struct {
 	Upstream_url string   `yaml:"upstream_url"`
 	Components   []string `yaml:"components"`
 	Archs        []string `yaml:"archs"`
+	GPG          GPG      `yaml:"gpg"`
+}
+
+type GPG struct {
+	Key     string   `yaml:"key,omitempty"`
+	Servers []string `yaml:"servers,omitempty"`
+	Trusted bool     `yaml:"trusted,omitempty"`
 }
 
 /* func (r Repo) String() string {
@@ -32,10 +39,51 @@ func (r Repo) GenerateRepos() []RepoDist {
 				Component: strings.Join(r.Components[:], " "),
 				Arch:      ra,
 				Url:       r.Upstream_url,
+				Trusted:   r.GPG.Trusted,
 			})
 		}
 	}
 	return lrd
+}
+
+func (r Repo) retrieveGpgKey() error {
+	var err error
+
+	var gpgImport bool
+	if strings.Contains(r.GPG.Key, "http") {
+		//cmd := exec.Command("bash","c",)
+	} else {
+		for _, gpgserver := range r.GPG.Servers {
+
+			args := []string{
+				"--no-default-keyring",
+				"--keyring",
+				"trustedkeys.gpg",
+				"--keyserver",
+				"hkp://" + gpgserver + ":80",
+				"--recv-keys",
+				r.GPG.Key,
+			}
+
+			cmd := exec.Command("gpg", args...)
+
+			err := cmd.Run()
+
+			if err != nil {
+				fmt.Printf(">>>> Could not retrieve key from %s, trying next gpg server\n", gpgserver)
+				gpgImport = false
+			} else {
+				gpgImport = true
+				break
+			}
+
+		}
+		if !gpgImport {
+			return fmt.Errorf("ERROR: Could not retrieve gpg key")
+		}
+
+	}
+	return err
 }
 
 type RepoDist struct {
@@ -44,6 +92,7 @@ type RepoDist struct {
 	Url       string
 	Component string
 	Arch      string
+	Trusted   bool
 }
 
 func (r RepoDist) String() string {
@@ -51,30 +100,44 @@ func (r RepoDist) String() string {
 }
 
 func (r RepoDist) CreateMirror(gopath string) error {
-	cmd := exec.Command(gopath,
+	var cmd *exec.Cmd
+	var trusted string
+	if r.Trusted {
+		trusted = "-ignore-signatures"
+	}
+	args := []string{
 		"mirror",
 		"create",
 		fmt.Sprintf("-architectures=%s", r.Arch),
+		trusted,
 		r.Name,
 		r.Url,
 		r.Dist,
 		r.Component,
-	)
-	log.Println(cmd)
-	err := cmd.Run()
-	if err != nil {
-		log.Fatal(err)
 	}
-	return err
+
+	cmd = exec.Command(gopath, args...)
+	if Debug {
+		log.Println(cmd)
+	}
+	return cmd.Run()
 }
 
 func (r RepoDist) UpdateMirror(gopath string) error {
+	var trusted string
+	if r.Trusted {
+		trusted = "-ignore-signatures"
+	}
 	cmd := exec.Command(gopath,
 		fmt.Sprintf("-architectures=%s", r.Arch),
+		trusted,
 		"mirror",
 		"update",
 		r.Name,
 	)
+	if Debug {
+		log.Println(cmd)
+	}
 	return cmd.Run()
 }
 

@@ -107,18 +107,18 @@ func main() {
 				log.Printf("%s doesn't exist ... creating", rd)
 				err := rd.CreateMirror(cfg.Gopath)
 				if err != nil {
-					log.Fatalln("Can't create mirror :", rd.Name)
+					log.Println("Can't create mirror :", rd.Name)
 					continue
 				}
 			}
 			err := rd.UpdateMirror(cfg.Gopath)
 			if err != nil {
-				log.Fatalln(err)
+				log.Println(err)
 				continue
 			}
 			err = rd.CreateSnaphot(cfg.Gopath)
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
 			}
 		}
 	}
